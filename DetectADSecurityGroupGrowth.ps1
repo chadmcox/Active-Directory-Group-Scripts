@@ -127,7 +127,7 @@ $groups = @()
 $groups = getADSecurityGroups
 $groups  | group whencreated | select name,count | sort name -Descending | out-host
 
-Write-host "Location groups where created in $(get-date -Format yyyy)"
+Write-host "OU Location for Groups created in $(get-date -Format yyyy)"
 $groups | where whencreated -like "$(get-date -Format yyyy)*" | group parentou | select name,count | out-host
 
 Write-host "Results can be found here $reportpath\reportADGroupGrowth.csv" 
