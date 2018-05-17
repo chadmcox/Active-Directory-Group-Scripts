@@ -5,7 +5,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.2
+.VERSION 0.3
 
 .GUID 522d844c-93a4-4220-a198-7c3737e78b3c
 
@@ -56,7 +56,7 @@ $time_log = "$reportpath\runtime.csv"
 
 Function createADSearchBase{
     $searchbase_list = "$reportpath\tmpADSearchBaseList.csv"
-    try{Get-ChildItem $searchbase_list | Where-Object { $_.LastWriteTime -lt $((Get-Date).AddDays(-5))} | Remove-Item -force}catch{}
+    try{Get-ChildItem $searchbase_list | Where-Object { $_.LastWriteTime -lt $((Get-Date).AddDays(-1))} | Remove-Item -force}catch{}
     write-host "Generating Search Base List"
     If (!(Test-Path $searchbase_list)){
         foreach($domain in (get-adforest).domains){
@@ -126,5 +126,11 @@ $hash_parentou = @{name='ParentOU';expression={
 $groups = @()
 $groups = getADSecurityGroups
 $groups  | group whencreated | select name,count | sort name -Descending | out-host
-Write-host "Results can be found here $reportpath\reportADGroupGrowth.csv"
+
+Write-host "Location groups where created in $(get-date -Format yyyy)"
+$groups | where whencreated -like "$(get-date -Format yyyy)*" | group parentou | select name,count | out-host
+
+Write-host "Results can be found here $reportpath\reportADGroupGrowth.csv" 
 $groups | export-csv "$reportpath\reportADGroupGrowth.csv" -NoTypeInformation
+
+
