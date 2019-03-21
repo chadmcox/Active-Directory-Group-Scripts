@@ -4,7 +4,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.VERSION 0.15
+.VERSION 0.2
 
 .GUID 5e7bfd24-88b8-4e4d-87fd-c4ffbfcf5be6
 
@@ -43,6 +43,8 @@ If (!($(Try { Test-Path $reportpath } Catch { $true }))){
     new-Item $reportpath -ItemType "directory"  -force
 }
 
+$start_time = get-date
+
 function gatherEmptyADGroups{
     [cmdletbinding()]
     param()
@@ -64,7 +66,7 @@ function gatherEmptyADGroups{
     $results | select domain,samaccountname,DisplayName, `
         groupscope,groupcategory,admincount,mail,$hash_whencreated,$hash_whenchanged,$hash_memlastchange, `
         ProtectedFromAccidentalDeletion,$hash_rid,ParentOU | where {$_.Rid -gt 1000 -and $_.parentou -notlike "*CN=Users,DC=*" -and $_.parentou `
-            -notlike "*OU=Microsoft Exchange Security Groups,DC=*"}
+            -notlike "*OU=Microsoft Exchange Security Groups,DC=*" -and $_.MembershipLastChanged -like "*"}
 }
 function gatherPopulatedADGroups{
     [cmdletbinding()]
@@ -86,7 +88,7 @@ function gatherPopulatedADGroups{
     $results | select domain,samaccountname,DisplayName, `
     groupscope,groupcategory,admincount,mail,$hash_groupasmember,$hash_whencreated,$hash_whenchanged,$hash_memlastchange, `
     ProtectedFromAccidentalDeletion,$hash_rid,ParentOU | where {$_.Rid -gt 1000 -and $_.parentou -notlike "*CN=Users,DC=*" -and $_.parentou `
-            -notlike "*OU=Microsoft Exchange Security Groups,DC=*"}
+            -notlike "*OU=Microsoft Exchange Security Groups,DC=*" -and $_.MembershipLastChanged -like "*"}
 }
 function dumpADGroupMemberof{
     [cmdletbinding()]
@@ -165,6 +167,11 @@ $report = $empty_groups | where {$_.MembershipLastChanged -eq "01-01-1901" -and 
 Write-host "Empty Groups Never Used Older than 1 year: $(($report | measure-object).count)"
 $report  | export-csv "$reportpath\Empty_Groups_Never_Used_Older_than_1_year.csv" -NoTypeInformation
 
+$date_created_before = (Get-Date).Adddays(-(1095))
+$report = $empty_groups | where {$_.MembershipLastChanged -eq "01-01-1901" -and $(get-date ($_).whencreated) -lt $date_created_before} 
+Write-host "Empty Groups Never Used Older than 3 year: $(($report | measure-object).count)"
+$report  | export-csv "$reportpath\Empty_Groups_Never_Used_Older_than_3_year.csv" -NoTypeInformation
+
 $date_changed_before = (Get-Date).Adddays(-(365))
 $report = $empty_groups | where {$_.MembershipLastChanged -ne "01-01-1901" -and $(get-date ($_).MembershipLastChanged) -lt $date_changed_before} 
 Write-host "Empty Groups not change in 1 years: $(($report | measure-object).count)"
@@ -204,6 +211,7 @@ $populated_groups | where {$_.ContainsGroupasMember -eq $true} | export-csv "$re
 
 $archive = "$path\Group_Cleanup_Report-ARCHIVE-$((Get-Date).ToString('MM-dd-yyyy_hh-mm-ss')).zip"
 archiveresults -source $reportpath -destination $archive
+
 write-host "--"
 write-host "There are two types of reports: Empty and Populated."
 write-host "--"
@@ -219,6 +227,8 @@ write-host "--"
 Write-host "All Reports can be found here $reportpath):"
 write-host "--"
 ($reportpath | dir).name | out-host
+
+Write-host Script run time $(NEW-TIMESPAN –Start $start_time –End $(get-date))
 <#
 
 $ad_security_groups = gatherADGroups
