@@ -1,9 +1,5 @@
 #Requires -Module ActiveDirectory
 #Requires -Version 4
-
-<#PSScriptInfo#Requires -Module ActiveDirectory
-#Requires -Version 4
-
 <#PSScriptInfo
 
 .VERSION 0.9
